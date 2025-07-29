@@ -1,0 +1,77 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+pip-wheel-metadata/
+
+# VS Code settings
+.vscode/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Pytest / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Mypy / Pylint / Pyright
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+.pyright/
+
+# Logs
+*.log
+
+# Database
+*.sqlite3
+instance/
+local.db
+
+# Docker
+*.pid
+*.seed
+*.bak
+docker-compose.override.yml
+
+# IDEs
+.idea/
+*.iml
+
+# Environment variables
+.env
+.env.*
+
+# Pytest cache
+.pytest_cache/
+
+# __init__.py backup files
+*__init__.py~
+
+# Jupyter (if used)
+.ipynb_checkpoints/
+
+# FastAPI auto-generated
+__pydantic__/ 
+
+# OS-specific
+.DS_Store
+Thumbs.db
