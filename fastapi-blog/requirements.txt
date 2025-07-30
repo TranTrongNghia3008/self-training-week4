@@ -12,3 +12,4 @@ passlib[bcrypt]
 python-multipart
 bcrypt
 pydantic-settings
+alembic

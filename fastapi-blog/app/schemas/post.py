@@ -11,10 +11,13 @@ class PostBase(BaseModel):
 class PostCreate(PostBase):
     pass
 
+class PostUpdate(PostBase): 
+    pass
+
 class PostOut(PostBase):
     id: int
     author: UserOut
-    media_items: List[MediaOut] = []
+    medias: List[MediaOut] = []
     comments: List[CommentOut] = []
 
     class Config:

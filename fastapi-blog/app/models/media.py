@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
-from app.db.base import Base
+from app.db.base_class import Base
 
 class Media(Base):
     __tablename__ = "media"
@@ -10,4 +10,4 @@ class Media(Base):
     file_type = Column(String, nullable=False)  # image, video, etc.
     post_id = Column(Integer, ForeignKey("posts.id"))
 
-    post = relationship("Post", back_populates="media_items")
+    post = relationship("Post", back_populates="medias")
