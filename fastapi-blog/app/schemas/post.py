@@ -18,4 +18,4 @@ class PostOut(PostBase):
     comments: List[CommentOut] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True

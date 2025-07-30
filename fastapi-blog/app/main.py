@@ -4,7 +4,7 @@ from app.db.init_db import init_db
 
 app = FastAPI(title="FastAPI Blog")
 
-# app.include_router(user.router, prefix="/api/v1/users", tags=["Users"])
+app.include_router(user.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(post.router, prefix="/api/v1/posts", tags=["Posts"])
 # app.include_router(comment.router, prefix="/api/v1/comments", tags=["Comments"])
 # app.include_router(media.router, prefix="/api/v1/media", tags=["Media"])
