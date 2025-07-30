@@ -1,14 +1,16 @@
 from pydantic import BaseModel
+from datetime import datetime
 
 class MediaBase(BaseModel):
-    file_url: str
-    file_type: str  # image or video
+    url: str
+    media_type: str
 
-class MediaCreate(MediaBase):
-    pass
+class MediaCreate(BaseModel):
+    pass 
 
 class MediaOut(MediaBase):
     id: int
+    uploaded_at: datetime
 
     class Config:
         from_attributes = True

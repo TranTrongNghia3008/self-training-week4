@@ -1,15 +1,23 @@
 from pydantic import BaseModel
-from .user import UserOut
+from datetime import datetime
+
 
 class CommentBase(BaseModel):
     content: str
 
+
 class CommentCreate(CommentBase):
     pass
 
+
+class CommentUpdate(CommentBase):
+    pass
+
+
 class CommentOut(CommentBase):
     id: int
-    author: UserOut
+    author_id: int
+    created_at: datetime
 
     class Config:
         from_attributes = True
