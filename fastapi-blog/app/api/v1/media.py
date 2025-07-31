@@ -1,4 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from fastapi import status
 from sqlalchemy.orm import Session
 from sqlalchemy import event
 from app.db.session import get_db
@@ -12,7 +13,7 @@ from app.schemas.media import MediaOut
 
 router = APIRouter()
 
-@router.post("/upload/{post_id}", response_model=MediaOut)
+@router.post("/upload/{post_id}", response_model=MediaOut, status_code=status.HTTP_201_CREATED)
 def upload_media(post_id: int,
                  file: UploadFile = File(...),
                  db: Session = Depends(get_db),

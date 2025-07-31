@@ -13,11 +13,12 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD_NAME: str
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
+    TEST_DATABASE_URL: str 
     class Config:
         env_file = ".env"
 
 settings = Settings()
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecret")
+JWT_SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30

@@ -11,5 +11,5 @@ class Post(Base):
     author_id = Column(Integer, ForeignKey("users.id"))
 
     author = relationship("User", back_populates="posts")
-    comments = relationship("Comment", back_populates="post", cascade="all, delete")
-    medias = relationship("Media", back_populates="post", cascade="all, delete")
+    comments = relationship("Comment", back_populates="post", cascade="all, delete-orphan")
+    medias = relationship("Media", back_populates="post", cascade="all, delete-orphan")

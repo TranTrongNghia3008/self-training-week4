@@ -9,8 +9,7 @@ pytest
 httpx
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt==3.2.2
 python-multipart
-bcrypt
 pydantic-settings
-alembic
 cloudinary

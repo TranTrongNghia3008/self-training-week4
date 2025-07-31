@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session, selectinload
 from typing import List
+from fastapi import status
 from app.db.session import get_db
 from app.schemas.post import PostCreate, PostUpdate, PostOut
 from app.models.post import Post
@@ -32,7 +33,7 @@ def get_post(post_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Post not found")
     return post
 
-@router.post("/post/", response_model=PostOut)
+@router.post("/post/", response_model=PostOut, status_code=status.HTTP_201_CREATED)
 def create_post(post: PostCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     new_post = Post(
         title=post.title,
