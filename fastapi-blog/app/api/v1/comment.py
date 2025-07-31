@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi import status
 from sqlalchemy.orm import Session
 from typing import List
 from app.models.comment import Comment
@@ -10,7 +11,7 @@ from app.core.dependencies import get_current_user
 
 router = APIRouter()
 
-@router.get("/post/{post_id}", response_model=List[CommentOut])
+@router.get("/post/{post_id}", response_model=List[CommentOut], status_code=status.HTTP_201_CREATED)
 def get_comments(post_id: int, db: Session = Depends(get_db)):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:

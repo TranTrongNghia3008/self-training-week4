@@ -10,7 +10,7 @@ class Media(Base):
     url = Column(String, nullable=False)
     public_id = Column(String, nullable=False) 
     media_type = Column(String, nullable=False) 
-    post_id = Column(Integer, ForeignKey("posts.id"))
+    post_id = Column(Integer, ForeignKey('posts.id', ondelete='CASCADE'), nullable=False)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
     post = relationship("Post", back_populates="medias")
