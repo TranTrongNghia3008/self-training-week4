@@ -50,7 +50,7 @@ class CommentAPITestCase(unittest.IsolatedAsyncioTestCase):
                 json={"content": "This is a comment"},
                 headers={"Content-Type": "application/json"}
             )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["content"], "This is a comment")
 
     async def test_get_comments(self):
@@ -65,7 +65,7 @@ class CommentAPITestCase(unittest.IsolatedAsyncioTestCase):
 
         async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
             response = await ac.get(f"/api/v1/blog/comments/post/{self.test_post.id}")
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response.json(), list)
         self.assertGreaterEqual(len(response.json()), 1)
 
