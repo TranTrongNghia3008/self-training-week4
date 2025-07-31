@@ -43,7 +43,7 @@ class MediaAPITestCase(unittest.IsolatedAsyncioTestCase):
 
         app.dependency_overrides[get_current_user] = lambda: self.test_user
 
-    @patch("app.api.v1.media.upload_media_to_cloudinary")
+    @patch("app.api.v1.blog.media.upload_media_to_cloudinary")
     async def test_upload_media(self, mock_upload):
         mock_upload.return_value = {
             "url": "http://cloudinary.com/fake.jpg",
@@ -83,7 +83,7 @@ class MediaAPITestCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["url"], "http://cloudinary.com/test.jpg")
 
-    @patch("app.api.v1.media.delete_media_from_cloudinary")
+    @patch("app.api.v1.blog.media.delete_media_from_cloudinary")
     async def test_delete_media(self, mock_delete_cloudinary):
         media = Media(
             url="http://cloudinary.com/test.jpg",

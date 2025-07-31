@@ -1,5 +1,6 @@
 import unittest
 import uuid
+from unittest.mock import patch
 
 from fastapi import status
 from sqlalchemy.orm import Session
@@ -35,17 +36,23 @@ class PostTestCase(unittest.IsolatedAsyncioTestCase):
         # Override get_current_user
         app.dependency_overrides[get_current_user] = lambda: self.test_user
 
-    async def test_create_post(self):
+    @patch("app.api.v1.blog.post.send_notification_email.delay")  
+    async def test_create_post(self, mock_send_email):
+        mock_send_email.return_value = None  # không làm gì cả khi gọi delay()
+
         async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
             response = await ac.post(
                 "/api/v1/blog/post/",
                 json={"title": "Test Post", "content": "Post content"},
                 headers={"Content-Type": "application/json"},
             )
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()["title"], "Test Post")
         self.assertEqual(response.json()["content"], "Post content")
         self.assertEqual(response.headers["content-type"], "application/json")
+
+        mock_send_email.assert_called_once()
 
     async def test_get_post_list(self):
         # Create a sample post before listing
