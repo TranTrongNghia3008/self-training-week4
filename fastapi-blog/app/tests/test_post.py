@@ -36,7 +36,7 @@ class PostTestCase(unittest.IsolatedAsyncioTestCase):
         # Override get_current_user
         app.dependency_overrides[get_current_user] = lambda: self.test_user
 
-    @patch("app.api.v1.blog.post.send_notification_email.delay")  
+    @patch("app.services.blog.post_service.send_notification_email.delay")  
     async def test_create_post(self, mock_send_email):
         mock_send_email.return_value = None  # không làm gì cả khi gọi delay()
 
