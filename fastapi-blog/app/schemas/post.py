@@ -3,10 +3,12 @@ from typing import List, Optional
 from .user import UserOut
 from .media import MediaOut
 from .comment import CommentOut
+from .category import CategoryOut
 
 class PostBase(BaseModel):
     title: str
     content: str
+    category_id: Optional[int]
 
 class PostCreate(PostBase):
     pass
@@ -19,6 +21,7 @@ class PostOut(PostBase):
     author: UserOut
     content: str
     views: int
+    category: Optional[CategoryOut]
     medias: List[MediaOut] = []
     comments: List[CommentOut] = []
 

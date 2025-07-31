@@ -13,11 +13,12 @@ router = APIRouter()
 @router.get("/", response_model=List[PostOut])
 def list_posts(
     search: Optional[str] = Query(None),
+    category_id: Optional[int] = Query(None),
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ):
-    return post_service.list_posts(search, limit, offset, db)
+    return post_service.list_posts(search, category_id, limit, offset, db)
 
 
 
