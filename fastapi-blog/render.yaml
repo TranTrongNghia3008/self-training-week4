@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: fastapi-blog
+    env: docker
+    plan: free
+    branch: main
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    buildCommand: ""
+    startCommand: ""
+    autoDeploy: true
+    envVars:
+      - key: SQLALCHEMY_DATABASE_URI
+        value: postgresql://blogdb_fastapi_user:ceujMKyxLshO1V5C4craK4qB82aIDmy6@dpg-d25jl52li9vc73fd450g-a/blogdb_fastapi
+      - key: SECRET_KEY
+        value: 1234
+      - key: CLOUDINARY_CLOUD_NAME
+        value: djh5c7smq
+      - key: CLOUDINARY_API_KEY
+        value: 687979197897648
+      - key: CLOUDINARY_API_SECRET
+        value: UU78oJ0SN6K9IJelFl_fEz5Vwe4
+      - key: SMTP_USER
+        value: nghia.trantrong3008@gmail.com
+      - key: SMTP_PASSWORD
+        value: lgrpcvsmowrgxxcf

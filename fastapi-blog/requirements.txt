@@ -16,3 +16,4 @@ cloudinary
 celery
 redis
 aiosmtplib
+uvicorn
