@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from typing import List
 from app.db.session import get_db
 from app.schemas.post import PostCreate, PostUpdate, PostOut
@@ -11,11 +11,23 @@ router = APIRouter()
 
 @router.get("/", response_model=List[PostOut])
 def list_posts(db: Session = Depends(get_db)):
-    return db.query(Post).all()
+    return db.query(Post)\
+        .options(
+            selectinload(Post.author),
+            selectinload(Post.comments),
+            selectinload(Post.medias)
+        ).all()
 
 @router.get("/post/{post_id}", response_model=PostOut)
 def get_post(post_id: int, db: Session = Depends(get_db)):
-    post = db.query(Post).filter(Post.id == post_id).first()
+    post = db.query(Post)\
+        .options(
+            selectinload(Post.author),
+            selectinload(Post.comments),
+            selectinload(Post.medias)
+        )\
+        .filter(Post.id == post_id)\
+        .first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return post
