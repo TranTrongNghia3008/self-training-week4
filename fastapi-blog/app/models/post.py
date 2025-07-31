@@ -8,6 +8,7 @@ class Post(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     content = Column(Text, nullable=False)
+    views = Column(Integer, default=0)
     author_id = Column(Integer, ForeignKey("users.id"))
 
     author = relationship("User", back_populates="posts")

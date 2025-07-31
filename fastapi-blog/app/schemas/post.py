@@ -17,6 +17,8 @@ class PostUpdate(PostBase):
 class PostOut(PostBase):
     id: int
     author: UserOut
+    content: str
+    views: int
     medias: List[MediaOut] = []
     comments: List[CommentOut] = []
 

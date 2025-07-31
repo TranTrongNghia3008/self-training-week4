@@ -40,6 +40,7 @@ def create_post(post: PostCreate, db: Session = Depends(get_db), current_user: U
     new_post = Post(
         title=post.title,
         content=post.content,
+        views=0,
         author_id=current_user.id
     )
     db.add(new_post)
