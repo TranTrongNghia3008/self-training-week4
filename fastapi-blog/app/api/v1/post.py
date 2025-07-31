@@ -7,6 +7,8 @@ from app.schemas.post import PostCreate, PostUpdate, PostOut
 from app.models.post import Post
 from app.models.user import User
 from app.core.dependencies import get_current_user  
+from app.workers.tasks import send_notification_email
+
 
 router = APIRouter()
 
@@ -43,6 +45,13 @@ def create_post(post: PostCreate, db: Session = Depends(get_db), current_user: U
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
+
+    send_notification_email.delay(
+        to_email="admin@example.com",
+        subject=f"New Post by {current_user.email}",
+        content=f"Title: {new_post.title}\n\n{new_post.content}"
+    )
+
     return new_post
 
 @router.put("/post/{post_id}", response_model=PostOut)
