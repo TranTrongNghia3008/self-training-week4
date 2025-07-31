@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.db.session import get_db
 from app.schemas.post import PostCreate, PostUpdate, PostOut
 from app.models.user import User
@@ -11,8 +11,14 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[PostOut])
-def list_posts(db: Session = Depends(get_db)):
-    return post_service.list_posts(db)
+def list_posts(
+    search: Optional[str] = Query(None),
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    return post_service.list_posts(search, limit, offset, db)
+
 
 
 @router.get("/post/{post_id}", response_model=PostOut)
@@ -34,3 +40,4 @@ def update_post(post_id: int, post_data: PostUpdate, db: Session = Depends(get_d
 def delete_post(post_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     post_service.delete_post(post_id, db, current_user)
     return {"message": "Post deleted"}
+    

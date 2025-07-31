@@ -1,6 +1,7 @@
 # app/services/blog/post_service.py
 
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import or_
 from fastapi import HTTPException
 from app.models.post import Post
 from app.models.user import User
@@ -8,13 +9,20 @@ from app.schemas.post import PostCreate, PostUpdate
 from app.workers.tasks import send_notification_email
 
 
-def list_posts(db: Session):
-    return db.query(Post)\
-        .options(
-            selectinload(Post.author),
-            selectinload(Post.comments),
-            selectinload(Post.medias)
-        ).all()
+def list_posts(search: str, limit: int, offset: int, db: Session):
+    query = db.query(Post).options(
+        selectinload(Post.author),
+        selectinload(Post.comments),
+        selectinload(Post.medias)
+    )
+
+    if search:
+        query = query.filter(or_(
+            Post.title.ilike(f"%{search}%"),
+            Post.content.ilike(f"%{search}%")
+        ))
+
+    return query.offset(offset).limit(limit).all()
 
 
 def get_post_by_id(post_id: int, db: Session):
