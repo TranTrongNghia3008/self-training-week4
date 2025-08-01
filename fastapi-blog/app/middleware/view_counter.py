@@ -1,9 +1,10 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from app.db.session import async_session
 from app.models import Post
-from app.db.session import SessionLocal
 
 import re
 
@@ -15,13 +16,13 @@ class ViewCountMiddleware(BaseHTTPMiddleware):
         match = re.match(r"^/api/v1/blog/post/(\d+)$", path)
         if match and method == "GET":
             post_id = int(match.group(1))
-            # Tạo session DB để cập nhật
-            db: Session = SessionLocal()
-            post = db.query(Post).filter(Post.id == post_id).first()
-            if post:
-                post.views += 1
-                db.commit()
-            db.close()
+
+            async with async_session() as session:
+                result = await session.execute(select(Post).filter(Post.id == post_id))
+                post = result.scalar_one_or_none()
+                if post:
+                    post.views += 1
+                    await session.commit()
 
         response: Response = await call_next(request)
         return response

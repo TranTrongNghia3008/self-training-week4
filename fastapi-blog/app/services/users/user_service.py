@@ -1,4 +1,5 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from datetime import datetime
 from jose import jwt, JWTError
 from fastapi import HTTPException
@@ -13,10 +14,11 @@ from app.core.security import (
 from app.core.config import settings
 
 
-def register_user(user_data: UserCreate, db: Session) -> User:
-    existing = db.query(User).filter(
-        (User.email == user_data.email) | (User.username == user_data.username)
-    ).first()
+async def register_user(user_data: UserCreate, db: AsyncSession) -> User:
+    result = await db.execute(
+        select(User).where((User.email == user_data.email) | (User.username == user_data.username))
+    )
+    existing = result.scalars().first()
     if existing:
         raise HTTPException(status_code=400, detail="User already exists")
 
@@ -26,18 +28,19 @@ def register_user(user_data: UserCreate, db: Session) -> User:
         hashed_password=get_password_hash(user_data.password)
     )
     db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    await db.commit()
+    await db.refresh(new_user)
     return new_user
 
 
-def authenticate_user(username: str, password: str, db: Session) -> Token:
-    user = db.query(User).filter(User.username == username).first()
+async def authenticate_user(username: str, password: str, db: AsyncSession) -> Token:
+    result = await db.execute(select(User).where(User.username == username))
+    user = result.scalars().first()
     if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     access_token = create_access_token(data={"sub": str(user.id)})
-    refresh_token = create_refresh_token(db, user.id)
+    refresh_token = await create_refresh_token(db, user.id)
 
     return Token(
         access_token=access_token,
@@ -46,22 +49,23 @@ def authenticate_user(username: str, password: str, db: Session) -> Token:
     )
 
 
-def refresh_user_token(data: RefreshTokenRequest, db: Session) -> Token:
+async def refresh_user_token(data: RefreshTokenRequest, db: AsyncSession) -> Token:
     try:
         payload = jwt.decode(data.refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id = int(payload.get("sub"))
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    db_token = db.query(RefreshToken).filter(RefreshToken.token == data.refresh_token).first()
+    result = await db.execute(select(RefreshToken).where(RefreshToken.token == data.refresh_token))
+    db_token = result.scalars().first()
     if not db_token or db_token.revoked or db_token.expires_at < datetime.utcnow():
         raise HTTPException(status_code=401, detail="Refresh token invalid or expired")
 
     db_token.revoked = True
-    db.commit()
+    await db.commit()
 
     access_token = create_access_token(data={"sub": str(user_id)})
-    new_refresh_token = create_refresh_token(db, user_id)
+    new_refresh_token = await create_refresh_token(db, user_id)
 
     return Token(
         access_token=access_token,
@@ -70,10 +74,11 @@ def refresh_user_token(data: RefreshTokenRequest, db: Session) -> Token:
     )
 
 
-def logout_user(data: RefreshTokenRequest, db: Session):
-    db_token = db.query(RefreshToken).filter(RefreshToken.token == data.refresh_token).first()
+async def logout_user(data: RefreshTokenRequest, db: AsyncSession):
+    result = await db.execute(select(RefreshToken).where(RefreshToken.token == data.refresh_token))
+    db_token = result.scalars().first()
     if not db_token:
         raise HTTPException(status_code=404, detail="Token not found")
 
     db_token.revoked = True
-    db.commit()
+    await db.commit()

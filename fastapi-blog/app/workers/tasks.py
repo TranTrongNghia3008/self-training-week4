@@ -1,6 +1,7 @@
 from celery import Celery
 from app.core.config import settings
 import aiosmtplib
+import asyncio
 from email.message import EmailMessage
 
 celery = Celery(
@@ -17,7 +18,6 @@ def send_notification_email(to_email: str, subject: str, content: str):
     message.set_content(content)
 
     # Use aiosmtplib to send email asynchronously
-    import asyncio
     async def send_email():
         await aiosmtplib.send(
             message,

@@ -1,4 +1,5 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from app.models.comment import Comment
 from app.models.post import Post
@@ -6,14 +7,20 @@ from app.schemas.comment import CommentCreate, CommentUpdate
 from app.models.user import User
 from app.websockets.comment_manager import comment_manager
 
-def get_comments_by_post(post_id: int, db: Session):
-    post = db.query(Post).filter(Post.id == post_id).first()
+
+async def get_comments_by_post(post_id: int, db: AsyncSession):
+    result = await db.execute(select(Post).where(Post.id == post_id))
+    post = result.scalars().first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+
+    await db.refresh(post)
     return post.comments
 
-async def create_comment(post_id: int, comment: CommentCreate, db: Session, current_user: User):
-    post = db.query(Post).filter(Post.id == post_id).first()
+
+async def create_comment(post_id: int, comment: CommentCreate, db: AsyncSession, current_user: User):
+    result = await db.execute(select(Post).where(Post.id == post_id))
+    post = result.scalars().first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
@@ -23,8 +30,8 @@ async def create_comment(post_id: int, comment: CommentCreate, db: Session, curr
         author_id=current_user.id
     )
     db.add(new_comment)
-    db.commit()
-    db.refresh(new_comment)
+    await db.commit()
+    await db.refresh(new_comment)
 
     await comment_manager.broadcast(post_id, {
         "type": "new_comment",
@@ -38,16 +45,18 @@ async def create_comment(post_id: int, comment: CommentCreate, db: Session, curr
 
     return new_comment
 
-async def update_comment(comment_id: int, comment_data: CommentUpdate, db: Session, current_user: User):
-    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+
+async def update_comment(comment_id: int, comment_data: CommentUpdate, db: AsyncSession, current_user: User):
+    result = await db.execute(select(Comment).where(Comment.id == comment_id))
+    comment = result.scalars().first()
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
     if comment.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to edit this comment")
 
     comment.content = comment_data.content
-    db.commit()
-    db.refresh(comment)
+    await db.commit()
+    await db.refresh(comment)
 
     await comment_manager.broadcast(comment.post_id, {
         "type": "update_comment",
@@ -61,15 +70,17 @@ async def update_comment(comment_id: int, comment_data: CommentUpdate, db: Sessi
 
     return comment
 
-async def delete_comment(comment_id: int, db: Session, current_user: User):
-    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+
+async def delete_comment(comment_id: int, db: AsyncSession, current_user: User):
+    result = await db.execute(select(Comment).where(Comment.id == comment_id))
+    comment = result.scalars().first()
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
     if comment.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this comment")
 
-    db.delete(comment)
-    db.commit()
+    await db.delete(comment)
+    await db.commit()
 
     await comment_manager.broadcast(comment.post_id, {
         "type": "delete_comment",
@@ -77,4 +88,5 @@ async def delete_comment(comment_id: int, db: Session, current_user: User):
             "id": comment_id,
         }
     })
+
     return {"message": "Comment deleted successfully"}

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from jose import jwt
-from sqlalchemy.orm import Session
 from passlib.context import CryptContext
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.token import RefreshToken
 
@@ -14,12 +14,12 @@ def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
-def create_refresh_token(db: Session, user_id: int) -> str:
+async def create_refresh_token(db: AsyncSession, user_id: int) -> str:
     expire = datetime.utcnow() + timedelta(days=7)
     payload = {
         "sub": str(user_id),
         "exp": expire,
-        "iat": datetime.utcnow().timestamp()  
+        "iat": datetime.utcnow().timestamp()
     }
     token = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -30,9 +30,8 @@ def create_refresh_token(db: Session, user_id: int) -> str:
         revoked=False
     )
     db.add(db_token)
-    db.commit()
+    await db.commit()
     return token
-
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)

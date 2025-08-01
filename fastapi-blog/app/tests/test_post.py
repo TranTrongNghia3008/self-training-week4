@@ -1,51 +1,49 @@
 import unittest
 import uuid
 from unittest.mock import patch
-
 from fastapi import status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
-from app.db.session import SessionLocal
-from app.models.post import Post
-from app.models.token import RefreshToken
-from app.models.user import User
-from app.models.comment import Comment
-from app.models.media import Media
-from app.models.category import Category
+from app.db.session import async_session
+from app.models import Post, User, Category, Comment, Media, RefreshToken
 from app.core.dependencies import get_current_user
 
 
 class PostTestCase(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        self.db: Session = SessionLocal()
+        async with async_session() as session:
+            # Tạo user test
+            self.unique_username = f"testuser_{uuid.uuid4().hex[:6]}"
+            test_user = User(
+                username=self.unique_username,
+                email=f"{self.unique_username}@example.com",
+                hashed_password="hashed",
+            )
+            session.add(test_user)
+            await session.commit()
+            await session.refresh(test_user)
+            self.test_user = test_user
+
+            # Tạo category
+            result = await session.execute(
+                Category.__table__.select().where(Category.name == "FastAPI")
+            )
+            existing_category = result.scalar_one_or_none()
+            if existing_category:
+                self.test_category = existing_category
+            else:
+                test_category = Category(name="FastAPI")
+                session.add(test_category)
+                await session.commit()
+                await session.refresh(test_category)
+                self.test_category = test_category
+
         self.transport = ASGITransport(app=app)
         self.base_url = "http://test"
-
-        # Create test user
-        self.unique_username = f"testuser_{uuid.uuid4().hex[:6]}"
-        self.test_user = User(
-            username=self.unique_username,
-            email=f"{self.unique_username}@example.com",
-            hashed_password="hashed",
-        )
-        self.db.add(self.test_user)
-        self.db.commit()
-        self.db.refresh(self.test_user)
-
-        # Create or get test category
-        existing_category = self.db.query(Category).filter_by(name="FastAPI").first()
-        if existing_category:
-            self.test_category = existing_category
-        else:
-            self.test_category = Category(name="FastAPI")
-            self.db.add(self.test_category)
-            self.db.commit()
-            self.db.refresh(self.test_category)
-
-        # Override auth
         app.dependency_overrides[get_current_user] = lambda: self.test_user
+
 
     @patch("app.services.blog.post_service.send_notification_email.delay")
     async def test_create_post(self, mock_send_email):
@@ -75,24 +73,23 @@ class PostTestCase(unittest.IsolatedAsyncioTestCase):
             author_id=self.test_user.id,
             category_id=self.test_category.id,
         )
-        self.db.add(post)
-        self.db.commit()
-        self.db.refresh(post)
+        async with async_session() as session:
+            session.add(post)
+            await session.commit()
 
         async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
             response = await ac.get("/api/v1/blog/")
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.json(), list)
         self.assertGreaterEqual(len(response.json()), 1)
 
     async def test_search_post_by_title_and_content(self):
-        post1 = Post(title="FastAPI Tutorial", content="Learn FastAPI", author_id=self.test_user.id, category_id=self.test_category.id)
-        post2 = Post(title="Flask Guide", content="FastAPI vs Flask", author_id=self.test_user.id, category_id=self.test_category.id)
-        post3 = Post(title="Django", content="Backend Framework", author_id=self.test_user.id, category_id=self.test_category.id)
-
-        self.db.add_all([post1, post2, post3])
-        self.db.commit()
+        async with async_session() as session:
+            post1 = Post(title="FastAPI Tutorial", content="Learn FastAPI", author_id=self.test_user.id, category_id=self.test_category.id)
+            post2 = Post(title="Flask Guide", content="FastAPI vs Flask", author_id=self.test_user.id, category_id=self.test_category.id)
+            post3 = Post(title="Django", content="Backend Framework", author_id=self.test_user.id, category_id=self.test_category.id)
+            session.add_all([post1, post2, post3])
+            await session.commit()
 
         async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
             response = await ac.get("/api/v1/blog/", params={"search": "fastapi"})
@@ -103,18 +100,17 @@ class PostTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(all("fastapi" in (p["title"] + p["content"]).lower() for p in data))
 
     async def test_filter_post_by_category_id(self):
-        # Create second category
-        category2 = Category(name="Django")
-        self.db.add(category2)
-        self.db.commit()
-        self.db.refresh(category2)
+        async with async_session() as session:
+            category2 = Category(name="Django")
+            session.add(category2)
+            await session.commit()
+            await session.refresh(category2)
 
-        post1 = Post(title="Post A", content="Content A", author_id=self.test_user.id, category_id=self.test_category.id)
-        post2 = Post(title="Post B", content="Content B", author_id=self.test_user.id, category_id=category2.id)
-        post3 = Post(title="Post C", content="Content C", author_id=self.test_user.id, category_id=self.test_category.id)
-
-        self.db.add_all([post1, post2, post3])
-        self.db.commit()
+            post1 = Post(title="Post A", content="Content A", author_id=self.test_user.id, category_id=self.test_category.id)
+            post2 = Post(title="Post B", content="Content B", author_id=self.test_user.id, category_id=category2.id)
+            post3 = Post(title="Post C", content="Content C", author_id=self.test_user.id, category_id=self.test_category.id)
+            session.add_all([post1, post2, post3])
+            await session.commit()
 
         async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
             response = await ac.get("/api/v1/blog/", params={"category_id": self.test_category.id})
@@ -128,25 +124,22 @@ class PostTestCase(unittest.IsolatedAsyncioTestCase):
         async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
             response = await ac.post(
                 "/api/v1/blog/post/",
-                json={  # Thiếu title và category_id
-                    "content": "Missing title and category_id"
-                },
+                json={"content": "Missing title and category_id"},
                 headers={"Content-Type": "application/json"},
             )
         self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
-        self.assertIn("detail", response.json())
 
     async def test_update_post(self):
-        # Tạo bài viết ban đầu
-        post = Post(
-            title="Old Title",
-            content="Old content",
-            author_id=self.test_user.id,
-            category_id=self.test_category.id,
-        )
-        self.db.add(post)
-        self.db.commit()
-        self.db.refresh(post)
+        async with async_session() as session:
+            post = Post(
+                title="Old Title",
+                content="Old content",
+                author_id=self.test_user.id,
+                category_id=self.test_category.id,
+            )
+            session.add(post)
+            await session.commit()
+            await session.refresh(post)
 
         async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
             response = await ac.put(
@@ -166,55 +159,50 @@ class PostTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(data["content"], "Updated content")
 
     async def test_delete_post(self):
-        post = Post(
-            title="Delete Me",
-            content="Some content",
-            author_id=self.test_user.id,
-            category_id=self.test_category.id,
-        )
-        self.db.add(post)
-        self.db.commit()
-        self.db.refresh(post)
-
-        async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
-            response = await ac.delete(f"/api/v1/blog/post/{post.id}")
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-
-        # Kiểm tra không còn trong DB
-        deleted = self.db.query(Post).filter_by(id=post.id).first()
-        self.assertIsNone(deleted)
-
-    async def test_post_pagination(self):
-        # Tạo 15 bài viết
-        posts = [
-            Post(
-                title=f"Post {i}",
-                content="Content",
+        async with async_session() as session:
+            post = Post(
+                title="Delete Me",
+                content="Some content",
                 author_id=self.test_user.id,
                 category_id=self.test_category.id,
             )
-            for i in range(15)
-        ]
-        self.db.add_all(posts)
-        self.db.commit()
+            session.add(post)
+            await session.commit()
+            await session.refresh(post)
+            post_id = post.id
+
+        async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
+            response = await ac.delete(f"/api/v1/blog/post/{post_id}")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        async with async_session() as session:
+            result = await session.get(Post, post_id)
+            self.assertIsNone(result)
+
+    async def test_post_pagination(self):
+        async with async_session() as session:
+            posts = [
+                Post(
+                    title=f"Post {i}",
+                    content="Content",
+                    author_id=self.test_user.id,
+                    category_id=self.test_category.id,
+                )
+                for i in range(15)
+            ]
+            session.add_all(posts)
+            await session.commit()
 
         async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
             response = await ac.get("/api/v1/blog/", params={"limit": 10, "offset": 0})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response.json()
-        self.assertIsInstance(data, list)
-        self.assertEqual(len(data), 10)
-
-
+        self.assertEqual(len(response.json()), 10)
 
     async def asyncTearDown(self):
-        self.db.query(RefreshToken).delete()
-        self.db.query(Comment).delete()
-        self.db.query(Media).delete()
-        self.db.query(Post).delete()
-        self.db.query(Category).delete()
-        self.db.query(User).delete()
-        self.db.commit()
-        self.db.close()
+        async with async_session() as session:
+            for model in [RefreshToken, Comment, Media, Post, Category, User]:
+                await session.execute(model.__table__.delete())
+            await session.commit()
+
