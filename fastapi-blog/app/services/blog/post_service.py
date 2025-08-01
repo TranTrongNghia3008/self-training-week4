@@ -73,7 +73,7 @@ def update_post(post_id: int, post_data: PostUpdate, db: Session, current_user: 
 
     post.title = post_data.title
     post.content = post_data.content
-    post.category = post_data.category_id
+    post.category_id = post_data.category_id
     db.commit()
     db.refresh(post)
     return post

@@ -37,7 +37,7 @@ def update_post(post_id: int, post_data: PostUpdate, db: Session = Depends(get_d
     return post_service.update_post(post_id, post_data, db, current_user)
 
 
-@router.delete("/post/{post_id}")
+@router.delete("/post/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(post_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     post_service.delete_post(post_id, db, current_user)
     return {"message": "Post deleted"}

@@ -124,6 +124,91 @@ class PostTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(data), 2)
         self.assertTrue(all(p["category"]["id"] == self.test_category.id for p in data))
 
+    async def test_create_post_validation_error(self):
+        async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
+            response = await ac.post(
+                "/api/v1/blog/post/",
+                json={  # Thiếu title và category_id
+                    "content": "Missing title and category_id"
+                },
+                headers={"Content-Type": "application/json"},
+            )
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertIn("detail", response.json())
+
+    async def test_update_post(self):
+        # Tạo bài viết ban đầu
+        post = Post(
+            title="Old Title",
+            content="Old content",
+            author_id=self.test_user.id,
+            category_id=self.test_category.id,
+        )
+        self.db.add(post)
+        self.db.commit()
+        self.db.refresh(post)
+
+        async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
+            response = await ac.put(
+                f"/api/v1/blog/post/{post.id}",
+                json={
+                    "title": "New Title",
+                    "content": "Updated content",
+                    "author_id": post.author_id,
+                    "category_id": post.category_id,
+                },
+                headers={"Content-Type": "application/json"},
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["title"], "New Title")
+        self.assertEqual(data["content"], "Updated content")
+
+    async def test_delete_post(self):
+        post = Post(
+            title="Delete Me",
+            content="Some content",
+            author_id=self.test_user.id,
+            category_id=self.test_category.id,
+        )
+        self.db.add(post)
+        self.db.commit()
+        self.db.refresh(post)
+
+        async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
+            response = await ac.delete(f"/api/v1/blog/post/{post.id}")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Kiểm tra không còn trong DB
+        deleted = self.db.query(Post).filter_by(id=post.id).first()
+        self.assertIsNone(deleted)
+
+    async def test_post_pagination(self):
+        # Tạo 15 bài viết
+        posts = [
+            Post(
+                title=f"Post {i}",
+                content="Content",
+                author_id=self.test_user.id,
+                category_id=self.test_category.id,
+            )
+            for i in range(15)
+        ]
+        self.db.add_all(posts)
+        self.db.commit()
+
+        async with AsyncClient(transport=self.transport, base_url=self.base_url) as ac:
+            response = await ac.get("/api/v1/blog/", params={"limit": 10, "offset": 0})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 10)
+
+
+
     async def asyncTearDown(self):
         self.db.query(RefreshToken).delete()
         self.db.query(Comment).delete()
